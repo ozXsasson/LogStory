@@ -1,0 +1,3 @@
+# Core: no dependencies (standard library only)
+# Optional, for native .evtx files:
+python-evtx>=0.7
