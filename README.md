@@ -1,4 +1,4 @@
-# LogStory 📖🔍
+# LogStory
 
 **Turn thousands of raw Windows / Sysmon events into a readable attack story.**
 
@@ -30,14 +30,14 @@ LogStory answers that automatically:
 
 ## Features
 
-- 🧠 **18 detection rules** covering 9 ATT&CK tactics, from phishing and encoded PowerShell to LSASS dumping, persistence, PsExec, log wiping and shadow copy deletion
-- ⏱️ **Threshold rules**, e.g. brute force = 5 failed logons from one IP within 120s
-- 🔗 **Incident correlation**: hits are grouped per host and time window into incidents
-- 🌳 **Process tree reconstruction** from Sysmon `ProcessGuid` links, pruned to show only the attack path
-- 🗺️ **Kill-chain view** showing which ATT&CK tactics the attacker reached
-- ✍️ **Narrative engine** that turns each detection into a human-readable sentence
-- 📄 **Outputs**: colored terminal timeline, a single-file HTML report, and JSON for SIEM / SOAR pipelines
-- 📦 **Zero dependencies**: pure Python standard library (`python-evtx` is only needed for `.evtx` files)
+- **18 detection rules** covering 9 ATT&CK tactics, from phishing and encoded PowerShell to LSASS dumping, persistence, PsExec, log wiping and shadow copy deletion
+- **Threshold rules**, e.g. brute force = 5 failed logons from one IP within 120s
+- **Incident correlation**: hits are grouped per host and time window into incidents
+- **Process tree reconstruction** from Sysmon `ProcessGuid` links, pruned to show only the attack path
+- **Kill-chain view** showing which ATT&CK tactics the attacker reached
+- **Narrative engine** that turns each detection into a human-readable sentence
+- **Outputs**: colored terminal timeline, a single-file HTML report, and JSON for SIEM / SOAR pipelines
+- **Zero dependencies**: pure Python standard library (`python-evtx` is only needed for `.evtx` files)
 
 ## Quick start
 
