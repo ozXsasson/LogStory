@@ -6,27 +6,26 @@ LogStory runs detection rules over your logs, maps every hit to **MITRE ATT&CK**
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![MITRE](https://img.shields.io/badge/MITRE%20ATT%26CK-17%20techniques-red) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-![LogStory report preview](report_preview.png)
+![How LogStory works](docs/how-it-works.png)
 
 ## Why
 
 During an investigation, the hardest part usually isn't finding *an* alert. It's answering:
 *"What actually happened, in what order, and how did the attacker get from A to B?"*
 
-LogStory answers that automatically:
+LogStory answers that automatically. Here it is running on the bundled sample, a simulated intrusion at a made-up company:
 
-```
-09:20:04  HIGH     T1566.001  Office application spawned a shell
-          WINWORD.EXE opened by ACME\jdoe spawned powershell.exe. A malicious document likely ran a macro.
-09:20:06  HIGH     T1105      Download cradle
-          powershell.exe pulled a payload from the internet: ... DownloadFile('http://203.0.113.66/upd.dll' ...
-09:25:00  CRITICAL T1003.001  LSASS memory access
-          rundll32.exe opened lsass.exe with 0x1010 access, which is how credential dumpers like Mimikatz work.
-09:35:00  HIGH     T1569.002  Remote execution with PsExec
-          The attacker moved laterally with PsExec: PsExec64.exe \\FS-01 -u ACME\svc_backup -s cmd.exe
-09:46:00  CRITICAL T1490      Shadow copies deleted
-          Shadow copies were deleted (vssadmin.exe delete shadows /all /quiet), a classic step right before ransomware encrypts.
-```
+![LogStory terminal output](docs/terminal.png)
+
+## The report
+
+Every run also writes a single HTML file, laid out like an incident case file: a short summary at the top, the kill chain, then every step of the attack in order with the time since the first sign.
+
+![LogStory HTML report](docs/report.png)
+
+At the end of each incident there's the process tree, trimmed down to just the attack path, so you can see exactly what spawned what:
+
+![Process tree of the attack](docs/process-tree.png)
 
 ## Features
 
@@ -128,7 +127,7 @@ The test suite covers every input format, true positives *and* false-positive ch
 
 ## Disclaimer
 
-The sample dataset is entirely fictional: made-up company, hosts and users, with IPs from RFC 5737 documentation ranges. Use LogStory only on logs you're authorized to analyze.
+The sample dataset is entirely fictional ("Orvane Logistics" and its hosts and users are made up), with IPs from RFC 5737 documentation ranges. Use LogStory only on logs you're authorized to analyze.
 
 ## License
 

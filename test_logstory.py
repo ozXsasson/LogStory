@@ -94,14 +94,14 @@ def test_brute_force_threshold():
 
 
 def test_story_is_human_readable():
-    d = detect([proc("C:\\W\\powershell.exe", "", "C:\\O\\WINWORD.EXE", User="ACME\\bob")])[0]
-    assert "WINWORD.EXE opened by ACME\\bob spawned powershell.exe" in d.story
+    d = detect([proc("C:\\W\\powershell.exe", "", "C:\\O\\WINWORD.EXE", User="ORVANE\\r.cohen")])[0]
+    assert "WINWORD.EXE opened by ORVANE\\r.cohen spawned powershell.exe" in d.story
 
 
 # ------------------------------------------------------------- end to end
 def test_sample_reconstructs_full_attack(sample):
     a = analyze(load_events(sample))
-    assert [i.computer for i in a.incidents] == ["DC-01.acme.local", "WS-042.acme.local"]
+    assert [i.computer for i in a.incidents] == ["ORV-DC01.orvane.local", "ORV-LT-0117.orvane.local"]
     ws = a.incidents[1]
     assert ws.severity == "critical"
     assert ws.tactics[0] == "Initial Access" and "Impact" in ws.tactics
@@ -114,7 +114,7 @@ def test_sample_reconstructs_full_attack(sample):
 def test_report_renders_and_escapes(sample):
     a = analyze(load_events(sample))
     page = render(a, "<script>x</script>")
-    assert page.startswith("<!DOCTYPE html>") and "Incident #2" in page
+    assert page.startswith("<!DOCTYPE html>") and "Incident 2" in page
     assert "<script>x</script>" not in page and "T1003.001" in page
     assert "chrome.exe" not in page  # tree is pruned to the attack path
 

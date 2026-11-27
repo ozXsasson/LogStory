@@ -99,6 +99,8 @@ class Incident:
         secs = int((self.end - self.start).total_seconds())
         span = f"{secs // 60} min" if secs >= 60 else f"{secs} s"
         n, t = len(self.detections), len(self.tactics)
+        if n == 1:
+            return f"1 suspicious action on {self.computer} ({self.tactics[0]})"
         return (f"{n} suspicious action{'s' * (n != 1)} on {self.computer} over {span}, "
                 f"covering {t} ATT&CK tactic{'s' * (t != 1)}: {' -> '.join(self.tactics)}")
 

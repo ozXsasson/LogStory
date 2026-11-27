@@ -1,62 +1,124 @@
-"""Self-contained HTML report: kill chain, story timeline, process tree."""
+"""Self-contained HTML report, styled as an incident case file."""
 from __future__ import annotations
 
 import html
 from datetime import datetime, timezone
 
-from engine import Analysis, Incident, ProcessNode
+from engine import Analysis, Detection, Incident, ProcessNode
 from rules import TACTICS
 
 e = html.escape
 
 CSS = """
-:root{--bg:#0b0f17;--panel:#121826;--panel2:#182033;--line:#243049;--text:#e6ebf5;--muted:#8a96ad;
---accent:#5ac8fa;--low:#64d2a0;--medium:#ffd166;--high:#ff8c42;--critical:#ff4d6d}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);
-font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
-.wrap{max-width:1100px;margin:0 auto;padding:32px 20px 64px}
-header h1{margin:0;font-size:30px;letter-spacing:-.5px}header h1 span{color:var(--accent)}
-header p{color:var(--muted);margin:4px 0 24px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.stat b{display:block;font-size:26px}.stat small{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.8px}
-h2{font-size:18px;margin:36px 0 12px}
-.chain{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-@media(max-width:700px){.chain{grid-template-columns:repeat(3,1fr)}}
-.tac{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 8px;font-size:12px;
-color:var(--muted);text-align:center;min-height:62px;display:flex;flex-direction:column;justify-content:center}
-.tac.hit{background:linear-gradient(160deg,#3a1220,#251424);border-color:var(--critical);color:var(--text)}
-.tac.hit b{color:var(--critical);font-size:18px}
-.incident{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-top:18px}
-.incident h3{margin:0 0 4px;font-size:17px}.headline{color:var(--muted);margin:0 0 18px}
-.sev{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;
-letter-spacing:.6px;color:#0b0f17}
-.sev.low{background:var(--low)}.sev.medium{background:var(--medium)}.sev.high{background:var(--high)}.sev.critical{background:var(--critical)}
-.timeline{position:relative;margin-left:8px;padding-left:26px;border-left:2px solid var(--line)}
-.step{position:relative;margin:0 0 18px}
-.step:before{content:"";position:absolute;left:-33px;top:6px;width:12px;height:12px;border-radius:50%;
-background:var(--bg);border:3px solid var(--sevc)}
-.step.low{--sevc:var(--low)}.step.medium{--sevc:var(--medium)}.step.high{--sevc:var(--high)}.step.critical{--sevc:var(--critical)}
-.meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.meta time{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text)}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
-.chip a{color:var(--accent);text-decoration:none}
-.story{margin:4px 0 0}.story code,code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;
-background:#0a0e16;border:1px solid var(--line);border-radius:5px;padding:1px 5px;word-break:break-all}
-.tree{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:#0a0e16;border:1px solid var(--line);
-border-radius:10px;padding:14px 16px;overflow-x:auto}
-.tree ul{list-style:none;margin:0;padding-left:20px;border-left:1px dashed var(--line)}.tree>ul{border:0;padding:0}
-.tree li{margin:5px 0;white-space:nowrap}.tree .bad{color:var(--critical);font-weight:700}
-.tree .cmd{color:var(--muted);font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
-th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
-td a{color:var(--accent)}footer{margin-top:40px;color:var(--muted);font-size:12px;text-align:center}
-.clean{background:var(--panel);border:1px solid var(--low);border-radius:12px;padding:20px;color:var(--low)}
+:root{
+  --paper:#f6f3ec;--sheet:#fffdf8;--ink:#1c1b19;--soft:#5f5a51;--faint:#8d877b;
+  --rule:#dcd5c6;--rule2:#ebe5d8;--tint:#f0ebe0;--link:#1d4f91;
+  --critical:#b3261e;--high:#c25a0a;--medium:#9a7b06;--low:#4b7a57;
+  --serif:"Iowan Old Style","Charter","Bitstream Charter",Georgia,"Times New Roman",serif;
+  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--link)}
+.sheet{max-width:980px;margin:28px auto 56px;background:var(--sheet);border:1px solid var(--rule);
+  box-shadow:0 1px 0 var(--rule2),0 12px 40px -24px rgba(60,50,30,.35);padding:44px 56px 40px}
+@media(max-width:760px){.sheet{margin:0;border:0;padding:24px 18px}}
+
+/* masthead */
+.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  border-bottom:3px double var(--ink);padding-bottom:10px;font:600 11px/1.4 var(--sans);
+  letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.mast .brand{color:var(--ink)}
+.stamp{border:2px solid var(--critical);color:var(--critical);padding:3px 9px;transform:rotate(-2deg);
+  font:700 11px/1 var(--mono);letter-spacing:.08em}
+h1{font:600 36px/1.15 var(--serif);margin:26px 0 8px;letter-spacing:-.01em}
+.lede{font:italic 18px/1.5 var(--serif);color:var(--soft);margin:0 0 22px;max-width:46em}
+
+/* figures */
+.figures{display:flex;flex-wrap:wrap;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.fig{flex:1 1 120px;padding:12px 16px 10px;border-right:1px solid var(--rule2)}
+.fig:last-child{border-right:0}
+.fig b{display:block;font:600 26px/1.1 var(--serif)}
+.fig span{font:600 10.5px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.fig.alert b{color:var(--critical)}
+
+h2{font:600 13px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--soft);
+  margin:40px 0 14px;display:flex;align-items:center;gap:12px}
+h2:after{content:"";flex:1;border-top:1px solid var(--rule)}
+
+/* kill chain */
+.chain{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+@media(max-width:760px){.chain{grid-template-columns:repeat(6,1fr);row-gap:14px}}
+.tac .bar{height:10px;background:var(--rule2)}
+.tac.hit .bar{background:var(--ink)}
+.tac .n{font:600 13px/1 var(--mono);height:18px;color:var(--ink)}
+.tac:not(.hit) .n{color:var(--rule)}
+.tac .lbl{font:11px/1.25 var(--sans);color:var(--faint);margin-top:6px;hyphens:auto}
+.tac.hit .lbl{color:var(--ink)}
+
+/* incidents */
+.incident{margin-top:30px;padding-top:6px}
+.inc-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.inc-head h3{font:600 23px/1.2 var(--serif);margin:0}
+.host{font:13px var(--mono);color:var(--soft)}
+.sevword{font:700 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase}
+.sevword.critical{color:var(--critical)}.sevword.high{color:var(--high)}
+.sevword.medium{color:var(--medium)}.sevword.low{color:var(--low)}
+.inc-sum{margin:8px 0 4px;color:var(--soft)}
+.inc-meta{font:12px var(--mono);color:var(--faint);margin-bottom:18px}
+
+.log{border-top:1px solid var(--ink)}
+.entry{display:grid;grid-template-columns:118px 1fr;border-bottom:1px solid var(--rule2)}
+.when{padding:12px 12px 12px 0;font:12.5px/1.45 var(--mono);color:var(--ink)}
+.when small{display:block;color:var(--faint);font-size:11px}
+.what{padding:11px 0 12px 16px;border-left:3px solid var(--sevc)}
+.entry.critical{--sevc:var(--critical)}.entry.high{--sevc:var(--high)}
+.entry.medium{--sevc:var(--medium)}.entry.low{--sevc:var(--low)}
+.what h4{margin:0;font:600 15px/1.35 var(--sans)}
+.what h4 .sevword{margin-left:8px;font-size:10px;color:var(--sevc)}
+.what p{margin:3px 0 5px}
+.what .ref{font:11.5px/1.4 var(--mono);color:var(--faint)}
+.what .ref a{color:var(--soft);text-decoration:none;border-bottom:1px dotted var(--faint)}
+.gap{grid-column:1/-1;font:italic 13px var(--serif);color:var(--faint);padding:8px 0 8px 134px;
+  background:repeating-linear-gradient(90deg,transparent 0 6px,var(--tint) 6px 7px)}
+code{font:12.5px/1.5 var(--mono);background:var(--tint);border:1px solid var(--rule2);padding:0 4px;
+  word-break:break-all;border-radius:2px}
+@media(max-width:760px){.entry{grid-template-columns:1fr}.when{padding-bottom:0}.gap{padding-left:0}}
+
+/* process tree */
+.tree{font:12.5px/1.7 var(--mono);background:var(--tint);border:1px solid var(--rule);padding:14px 18px;
+  overflow-x:auto;white-space:pre}
+.tree .br{color:var(--faint)}.tree .p{color:var(--ink)}
+.tree .bad{color:var(--critical);font-weight:700}
+.tree .ids{color:var(--critical);font-size:11px}
+.tree .cmd{color:var(--faint)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font:600 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:left;
+  border-bottom:1px solid var(--ink);padding:6px 8px}
+td{border-bottom:1px solid var(--rule2);padding:7px 8px}
+td.m{font-family:var(--mono);font-size:12.5px}
+td.n{text-align:right;font-family:var(--mono)}
+.clean{font:italic 18px var(--serif);color:var(--low);padding:18px 0}
+footer{margin-top:36px;padding-top:10px;border-top:1px solid var(--rule);font:11.5px var(--mono);
+  color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media print{html{background:#fff}.sheet{box-shadow:none;border:0;margin:0}}
 """
 
 
-def _fmt(ts: datetime) -> str:
-    return ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+def _fmt(ts: datetime, with_date: bool = True) -> str:
+    fmt = "%Y-%m-%d %H:%M:%S UTC" if with_date else "%H:%M:%S"
+    return ts.astimezone(timezone.utc).strftime(fmt)
+
+
+def _delta(seconds: float) -> str:
+    s = int(seconds)
+    if s < 60:
+        return f"+{s}s"
+    if s < 3600:
+        return f"+{s // 60}m {s % 60:02d}s"
+    return f"+{s // 3600}h {(s % 3600) // 60:02d}m"
 
 
 def _story_html(text: str) -> str:
@@ -72,82 +134,122 @@ def _on_attack_path(node: ProcessNode, depth: int = 0) -> bool:
     return depth < 12 and any(_on_attack_path(c, depth + 1) for c in node.children)
 
 
-def _tree(node: ProcessNode, depth: int = 0) -> str:
-    """Render only the branches that lead to flagged processes (hides benign noise)."""
+def _tree_lines(node: ProcessNode, prefix: str = "", last: bool = True,
+                root: bool = True, depth: int = 0) -> list[str]:
+    """Draw the attack path as a classic ├─ / └─ tree, hiding benign branches."""
     if depth > 12 or not _on_attack_path(node):
-        return ""
-    cls = "bad" if node.flagged else ""
-    flags = f' <span class="sev critical">{", ".join(node.flagged)}</span>' if node.flagged else ""
-    cmd = node.command_line if len(node.command_line) < 140 else node.command_line[:137] + "..."
-    kids = "".join(_tree(c, depth + 1) for c in sorted(node.children, key=lambda n: n.timestamp))
-    return (f'<li><span class="{cls}">{e(node.name)}</span>{flags} '
-            f'<span class="cmd">{e(cmd)}</span>{"<ul>" + kids + "</ul>" if kids else ""}</li>')
+        return []
+    branch = "" if root else ("└─ " if last else "├─ ")
+    name_cls = "bad" if node.flagged else "p"
+    ids = f' <span class="ids">[{", ".join(node.flagged)}]</span>' if node.flagged else ""
+    cmd = node.command_line if len(node.command_line) < 110 else node.command_line[:107] + "..."
+    lines = [f'<span class="br">{e(prefix + branch)}</span><span class="{name_cls}">{e(node.name)}</span>'
+             f'{ids}  <span class="cmd">{e(cmd)}</span>']
+    kids = [c for c in sorted(node.children, key=lambda n: n.timestamp) if _on_attack_path(c)]
+    child_prefix = prefix if root else prefix + ("   " if last else "│  ")
+    for i, child in enumerate(kids):
+        lines += _tree_lines(child, child_prefix, i == len(kids) - 1, False, depth + 1)
+    return lines
+
+
+def _entry(d: Detection, start: datetime) -> str:
+    r = d.rule
+    return f"""
+    <div class="entry {d.severity}">
+      <div class="when">{_fmt(d.timestamp, False)}<small>{_delta((d.timestamp - start).total_seconds())}</small></div>
+      <div class="what">
+        <h4>{e(r.title)}<span class="sevword">{d.severity}</span></h4>
+        <p>{_story_html(d.story)}</p>
+        <div class="ref"><a href="{r.technique_url}" target="_blank" rel="noopener">{r.technique}</a>
+          {e(r.technique_name)} &middot; {e(r.tactic)} &middot; {r.id}</div>
+      </div>
+    </div>"""
 
 
 def _incident(inc: Incident) -> str:
-    steps = []
+    rows, prev = [], None
     for d in inc.detections:
-        r = d.rule
-        steps.append(f"""
-      <div class="step {d.severity}">
-        <div class="meta"><time>{_fmt(d.timestamp)}</time>
-          <span class="sev {d.severity}">{d.severity}</span>
-          <span class="chip">{e(r.tactic)}</span>
-          <span class="chip"><a href="{r.technique_url}" target="_blank" rel="noopener">{r.technique} {e(r.technique_name)}</a></span>
-          <span class="chip">{r.id}</span></div>
-        <p class="story"><b>{e(r.title)}.</b> {_story_html(d.story)}</p>
-      </div>""")
+        if prev is not None:
+            gap = (d.timestamp - prev).total_seconds()
+            if gap >= 240:
+                rows.append(f'<div class="gap">{int(gap // 60)} minutes pass&hellip;</div>')
+        rows.append(_entry(d, inc.start))
+        prev = d.timestamp
     tree = ""
     if inc.roots:
-        tree = ('<h2>Process tree (attack path)</h2><div class="tree"><ul>'
-                + "".join(_tree(r) for r in inc.roots) + "</ul></div>")
+        lines = [ln for r in inc.roots for ln in _tree_lines(r)]
+        tree = '<h2>Process tree &middot; attack path</h2><div class="tree">' + "\n".join(lines) + "</div>"
     users = ", ".join(inc.users) or "n/a"
     return f"""
   <section class="incident">
-    <h3>Incident #{inc.id} &middot; {e(inc.computer)} <span class="sev {inc.severity}">{inc.severity}</span></h3>
-    <p class="headline">{e(inc.headline())}<br>Users: {e(users)} &middot; {_fmt(inc.start)} to {_fmt(inc.end)}</p>
-    <div class="timeline">{''.join(steps)}</div>
+    <div class="inc-head"><h3>Incident {inc.id}</h3><span class="host">{e(inc.computer)}</span>
+      <span class="sevword {inc.severity}">{inc.severity}</span></div>
+    <p class="inc-sum">{e(inc.headline())}</p>
+    <div class="inc-meta">{_fmt(inc.start)} &rarr; {_fmt(inc.end, False)} &middot; user: {e(users)}</div>
+    <div class="log">{''.join(rows)}</div>
     {tree}
   </section>"""
+
+
+def _title(analysis: Analysis) -> tuple[str, str]:
+    if not analysis.incidents:
+        return "Nothing suspicious found", "No detection rule fired on these logs."
+    worst = max(analysis.incidents, key=lambda i: (
+        ["low", "medium", "high", "critical"].index(i.severity), len(i.detections)))
+    first, last = worst.detections[0], worst.detections[-1]
+    host = worst.computer.split(".")[0]
+    mins = max(1, int((worst.end - worst.start).total_seconds() // 60))
+    return (f"What happened on {host}",
+            f"The first sign shows up at {_fmt(first.timestamp, False)}: {first.rule.title.lower()}. "
+            f"The last one, {mins} minutes later: {last.rule.title.lower()}. "
+            f"Every step in between is below, in the order it happened.")
 
 
 def render(analysis: Analysis, source: str = "") -> str:
     sev = analysis.severity_counts
     hits = analysis.tactic_hits
     chain = "".join(
-        f'<div class="tac {"hit" if hits[t] else ""}"><b>{hits[t] or "&middot;"}</b>{e(t)}</div>'
+        f'<div class="tac {"hit" if hits[t] else ""}"><div class="n">{hits[t] or "&middot;"}</div>'
+        f'<div class="bar"></div><div class="lbl">{e(t)}</div></div>'
         for t in TACTICS)
+
     techniques: dict[str, tuple] = {}
     for d in analysis.detections:
         r = d.rule
-        cnt = techniques.get(r.technique, (r, 0))[1]
-        techniques[r.technique] = (r, cnt + 1)
+        techniques[r.technique] = (r, techniques.get(r.technique, (r, 0))[1] + 1)
     rows = "".join(
-        f'<tr><td><a href="{r.technique_url}" target="_blank" rel="noopener">{r.technique}</a></td>'
-        f"<td>{e(r.technique_name)}</td><td>{e(r.tactic)}</td><td>{n}</td></tr>"
+        f'<tr><td class="m"><a href="{r.technique_url}" target="_blank" rel="noopener">{r.technique}</a></td>'
+        f'<td>{e(r.technique_name)}</td><td>{e(r.tactic)}</td><td class="n">{n}</td></tr>'
         for r, n in sorted(techniques.values(), key=lambda x: TACTICS.index(x[0].tactic)))
+
     body = "".join(_incident(i) for i in analysis.incidents) or \
-        '<div class="clean">No suspicious activity found. The story is a quiet one.</div>'
+        '<p class="clean">The logs are quiet. Nothing matched any rule.</p>'
     span = ""
     if analysis.events:
-        span = f"{_fmt(analysis.events[0].timestamp)} to {_fmt(analysis.events[-1].timestamp)}"
+        span = f"{_fmt(analysis.events[0].timestamp)} &rarr; {_fmt(analysis.events[-1].timestamp)}"
+    title, lede = _title(analysis)
+    tactics_hit = sum(1 for v in hits.values() if v)
+    stamp = '<span class="stamp">TLP:AMBER</span>' if analysis.detections else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LogStory Report</title><style>{CSS}</style></head>
-<body><div class="wrap">
-<header><h1>Log<span>Story</span></h1>
-<p>Attack timeline reconstructed from {e(source) or "Windows logs"} &middot; {span}</p></header>
-<div class="stats">
-  <div class="stat"><small>Events analyzed</small><b>{len(analysis.events):,}</b></div>
-  <div class="stat"><small>Detections</small><b>{len(analysis.detections)}</b></div>
-  <div class="stat"><small>Incidents</small><b>{len(analysis.incidents)}</b></div>
-  <div class="stat"><small>Critical / High</small><b style="color:var(--critical)">{sev['critical']} / {sev['high']}</b></div>
-  <div class="stat"><small>Tactics hit</small><b>{sum(1 for v in hits.values() if v)} / {len(TACTICS)}</b></div>
+<title>LogStory: {e(title)}</title><style>{CSS}</style></head>
+<body><article class="sheet">
+<div class="mast"><div><span class="brand">LogStory</span> &middot; incident report<br>
+  source: {e(source) or "windows logs"} &middot; {span}</div>{stamp}</div>
+<h1>{e(title)}</h1>
+<p class="lede">{e(lede)}</p>
+<div class="figures">
+  <div class="fig"><b>{len(analysis.events):,}</b><span>events read</span></div>
+  <div class="fig"><b>{len(analysis.detections)}</b><span>detections</span></div>
+  <div class="fig"><b>{len(analysis.incidents)}</b><span>incidents</span></div>
+  <div class="fig alert"><b>{sev['critical']}</b><span>critical</span></div>
+  <div class="fig"><b>{tactics_hit}<small style="font-size:15px;color:var(--faint)"> / {len(TACTICS)}</small></b><span>ATT&amp;CK tactics</span></div>
 </div>
-<h2>Kill chain (MITRE ATT&amp;CK)</h2><div class="chain">{chain}</div>
-<h2>The story</h2>{body}
-<h2>Techniques observed</h2>
-<table><thead><tr><th>ID</th><th>Technique</th><th>Tactic</th><th>Hits</th></tr></thead><tbody>{rows}</tbody></table>
-<footer>Generated by LogStory &middot; {_fmt(datetime.now(timezone.utc))}</footer>
-</div></body></html>"""
+<h2>Kill chain</h2><div class="chain">{chain}</div>
+<h2>Timeline</h2>{body}
+<h2>Techniques seen</h2>
+<table><thead><tr><th>ID</th><th>Technique</th><th>Tactic</th><th style="text-align:right">Hits</th></tr></thead>
+<tbody>{rows}</tbody></table>
+<footer><span>LogStory &middot; github.com/ozXsasson/LogStory</span><span>{_fmt(datetime.now(timezone.utc))}</span></footer>
+</article></body></html>"""
