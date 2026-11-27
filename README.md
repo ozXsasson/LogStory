@@ -4,7 +4,7 @@
 
 LogStory runs detection rules over your logs, maps every hit to **MITRE ATT&CK**, groups the hits into incidents, rebuilds the **process tree** of the attack, and writes each step in plain English. You get a terminal timeline and a self-contained HTML report you can hand to your team lead or attach to a ticket.
 
-![Python](https://img.shields.io/badge/python-3.9%2B-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![MITRE](https://img.shields.io/badge/MITRE%20ATT%26CK-17%20techniques-red) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![MITRE](https://img.shields.io/badge/MITRE%20ATT%26CK-17%20techniques-red) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ![LogStory report preview](report_preview.png)
 

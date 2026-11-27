@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 _NS = re.compile(r"\{.*?\}")
-_FRACTION = re.compile(r"(\.\d{6})\d+")
+_FRACTION = re.compile(r"\.(\d+)")
 
 
 @dataclass
@@ -54,7 +54,7 @@ def parse_timestamp(value: str | int | float | None) -> datetime:
     if m:
         return datetime.fromtimestamp(int(m.group(1)) / 1000, tz=timezone.utc)
     text = text.replace("Z", "+00:00").replace(" ", "T", 1)
-    text = _FRACTION.sub(r"\1", text)
+    text = _FRACTION.sub(lambda m: "." + m.group(1)[:6].ljust(6, "0"), text, count=1)
     ts = datetime.fromisoformat(text)
     return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
 
